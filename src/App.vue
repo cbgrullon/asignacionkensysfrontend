@@ -11,7 +11,8 @@
 <script>
 import axios from 'axios';
 import NavBar from './components/NavBar.vue';
-axios.defaults.baseURL = 'https://localhost:7089/api/';
+import constants from './constants';
+axios.defaults.baseURL = constants.apiUrl;
 export default {
   name: 'App',
   components: {

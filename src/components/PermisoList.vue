@@ -34,6 +34,7 @@
 </template>
 <script>
 import axios from 'axios';
+import constants from '../constants';
 export default {
     name: 'permiso-list',
     data() {
@@ -49,26 +50,40 @@ export default {
         initialise() {
             axios.get('Permiso').then(response => {
 
-                this.permisos = response.data.map(x=>{
+                this.permisos = response.data.map(x => {
                     return {
                         ...x,
                         formattedFechaPermiso: new Date(x.fechaPermiso).toLocaleDateString()
                     }
                 });
+            })
+            .catch(error => {
+
+                this.genericError(error.response)
+
             });
             this.toast = this.$swal.mixin({
-                toast: true,
-                position: "top-end",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
+                ...constants.toastConfig,
                 didOpen: (toast) => {
                     toast.onmouseenter = this.$swal.stopTimer;
                     toast.onmouseleave = this.$swal.resumeTimer;
                 }
             });
+
+        },
+        genericError(error) {
+
+            this.$swal.fire({
+                title: 'Ha ocurrido un error inesperado',
+                text: 'Contacte a su administrador!',
+                icon: 'error'
+            });
+
+            console.error(error);
+
         },
         deletePermiso(id) {
+
             this.$swal.fire({
                 title: "Esta seguro que quiere eliminar este permiso?",
                 icon: "warning",
@@ -77,31 +92,36 @@ export default {
                 cancelButtonColor: "#3085d6",
                 confirmButtonText: "Eliminar",
                 cancelButtonText: "Cancelar"
-            }).then((result) => {
+            })
+            .then((result) => {
+
                 if (result.isConfirmed) {
                     axios.delete(`Permiso/${id}`)
                         .then(response => {
+
                             this.toast.fire({
                                 icon: 'success',
                                 title: 'Permiso eliminado'
                             });
                             this.initialise();
+                            
                         }).catch(error => {
+
                             if (error.response.status === 404) {
+
                                 this.$swal.fire({
                                     title: 'No se encontro el permiso a eliminar',
                                     icon: 'warning'
-                                })
-                            }else{
-                                this.$swal.fire({
-                                    title: 'Ha ocurrido un error inesperado',
-                                    text: 'Contacte a su administrador!',
-                                    icon: 'error'
                                 });
-                                console.error(error.response);
+
+                            } else {
+
+                                this.genericError(error.response);
+
                             }
                         });
                 }
+
             });
         }
     }

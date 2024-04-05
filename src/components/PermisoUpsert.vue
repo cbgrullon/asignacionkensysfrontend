@@ -36,9 +36,11 @@
 <script>
 import axios from 'axios';
 import router from '../router';
+import constants from '../constants';
 export default {
     name: 'permiso-upsert',
     data() {
+
         return {
             id: null,
             nombreEmpleado: null,
@@ -50,60 +52,81 @@ export default {
             isInsert: null,
             toast: null
         };
+
     },
     mounted() {
+
         this.initialise();
+
     },
     watch: {
         '$route': 'initialise'
     },
     methods: {
         initialise() {
+
             this.toast = this.$swal.mixin({
-                toast: true,
-                position: "top-end",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
+                ...constants.toastConfig,
                 didOpen: (toast) => {
                     toast.onmouseenter = this.$swal.stopTimer;
                     toast.onmouseleave = this.$swal.resumeTimer;
                 }
             });
+
             this.isInsert = !this.$route.params.id;
             this.id = this.$route.params.id;
             this.titulo = this.isInsert ? 'Nuevo Permiso' : 'Editar Permiso';
             axios.get('TipoPermiso').then(response => {
+
                 this.tipoPermisos = response.data;
+
+            }).catch(error => {
+
+                this.genericError(error.response);
+                this.$router.push(`/`);
+
             });
             if (this.$route.params.id) {
+
                 axios.get(`Permiso/${this.$route.params.id}`)
                     .then(response => {
+
                         let { data } = response;
                         this.nombreEmpleado = data.nombreEmpleado;
                         this.apellidosEmpleado = data.apellidosEmpleado;
                         this.tipoPermisoId = data.tipoPermisoId;
                         this.fechaPermiso = data.fechaPermiso;
+
                     })
                     .catch(error => {
                         if (error.response.status === 404) {
+
                             this.toast.fire({
                                 title: 'Permiso no encontrado',
                                 icon: 'warning'
                             });
-                            this.$router.push(`/`);
+
                         } else {
-                            this.$swal.fire({
-                                title: 'Ha ocurrido un error inesperado',
-                                text: 'Contacte a su administrador!',
-                                icon: 'error'
-                            });
-                            console.error(error.response);
+
+                            this.genericError(error.response);
+                            this.$router.push(`/`);
+
                         }
                     });
             }
         },
+        genericError(error) {
+
+            this.$swal.fire({
+                title: 'Ha ocurrido un error inesperado',
+                text: 'Contacte a su administrador!',
+                icon: 'error'
+            });
+            console.error(error);
+
+        },
         save() {
+
             let { id, nombreEmpleado, apellidosEmpleado, tipoPermisoId, fechaPermiso } = this;
             let payload = {
                 id,
@@ -113,24 +136,27 @@ export default {
                 fechaPermiso
             }
             axios.post("Permiso", payload).then(response => {
+
                 this.toast.fire({
                     icon: 'success',
                     title: 'Permiso Guardado satisfactoriamente'
-                })
+                });
                 this.$router.push(`/`);
+
             }).catch(error => {
+
                 if (error.response.status === 400) {
+
                     for (let key of Object.keys(error.response.data)) {
+
                         let firstMessage = error.response.data[key][0];
                         this.$swal({ title: firstMessage, icon: 'warning' });
+
                     }
                 } else {
-                    this.$swal.fire({
-                        title: 'Ha ocurrido un error inesperado',
-                        text: 'Contacte a su administrador!',
-                        icon: 'error'
-                    });
-                    console.error(error.response);
+
+                    this.genericError(error.response);
+
                 }
             })
         }
