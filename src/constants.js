@@ -6,5 +6,7 @@ export default {
         showConfirmButton: false,
         timer: 3000,
         timerProgressBar: true,
-    }
+    },
+    genericErrorMessage: 'Ha ocurrido un error inesperado',
+    permisoNotFoundErrorMessage: 'Permiso no encontrado',
 }

@@ -34,9 +34,9 @@
     </div>
 </template>
 <script>
-import axios from 'axios';
 import router from '../router';
 import constants from '../constants';
+import { getPermisoById, getTiposDePermiso, upsertPermiso } from '../services/apiService';
 export default {
     name: 'permiso-upsert',
     data() {
@@ -76,53 +76,64 @@ export default {
             this.isInsert = !this.$route.params.id;
             this.id = this.$route.params.id;
             this.titulo = this.isInsert ? 'Nuevo Permiso' : 'Editar Permiso';
-            axios.get('TipoPermiso').then(response => {
 
-                this.tipoPermisos = response.data;
-
-            }).catch(error => {
-
-                this.genericError(error.response);
-                this.$router.push(`/`);
-
-            });
-            if (this.$route.params.id) {
-
-                axios.get(`Permiso/${this.$route.params.id}`)
-                    .then(response => {
-
-                        let { data } = response;
-                        this.nombreEmpleado = data.nombreEmpleado;
-                        this.apellidosEmpleado = data.apellidosEmpleado;
-                        this.tipoPermisoId = data.tipoPermisoId;
-                        this.fechaPermiso = data.fechaPermiso;
-
-                    })
-                    .catch(error => {
-                        if (error.response.status === 404) {
-
-                            this.toast.fire({
-                                title: 'Permiso no encontrado',
-                                icon: 'warning'
-                            });
-
-                        } else {
-
-                            this.genericError(error.response);
-                            this.$router.push(`/`);
-
-                        }
-                    });
-            }
-        },
-        genericError(error) {
 
             this.$swal.fire({
-                title: 'Ha ocurrido un error inesperado',
-                text: 'Contacte a su administrador!',
-                icon: 'error'
+                title: 'Cargando ...',
+                onBeforeOpen() {
+                    Swal.showLoading()
+                },
+                onAfterClose() {
+                    Swal.hideLoading()
+                },
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
             });
-            console.error(error);
+
+            getTiposDePermiso()
+                .then(tipoPermisos => {
+
+                    this.tipoPermisos = tipoPermisos;
+
+                })
+                .catch(errorMessage => {
+
+                    this.showWarningToast(errorMessage);
+                    this.$router.push(`/`);
+
+                })
+                .finally(() => {
+                    this.$swal.close();
+                });
+
+            if (this.$route.params.id) {
+
+                getPermisoById(this.$route.params.id)
+                    .then(permiso => {
+
+                        this.nombreEmpleado = permiso.nombreEmpleado;
+                        this.apellidosEmpleado = permiso.apellidosEmpleado;
+                        this.tipoPermisoId = permiso.tipoPermisoId;
+                        this.fechaPermiso = permiso.fechaPermiso;
+
+                    })
+                    .catch(errorMessage => {
+
+                        this.showWarningToast(errorMessage);
+                        this.$router.push(`/`);
+
+                    });
+
+            }
+        },
+        showWarningToast(message) {
+
+            this.$swal.fire({
+                title: message,
+                icon: 'warning'
+            });
 
         },
         save() {
@@ -135,30 +146,22 @@ export default {
                 tipoPermisoId,
                 fechaPermiso
             }
-            axios.post("Permiso", payload).then(response => {
+            upsertPermiso(payload)
+                .then(() => {
 
-                this.toast.fire({
-                    icon: 'success',
-                    title: 'Permiso Guardado satisfactoriamente'
+                    this.toast.fire({
+                        icon: 'success',
+                        title: 'Permiso Guardado satisfactoriamente'
+                    });
+                    this.$router.push(`/`);
+
+                })
+                .catch(errorMessage => {
+
+                    this.showWarningToast(errorMessage);
+
                 });
-                this.$router.push(`/`);
 
-            }).catch(error => {
-
-                if (error.response.status === 400) {
-
-                    for (let key of Object.keys(error.response.data)) {
-
-                        let firstMessage = error.response.data[key][0];
-                        this.$swal({ title: firstMessage, icon: 'warning' });
-
-                    }
-                } else {
-
-                    this.genericError(error.response);
-
-                }
-            })
         }
     },
     components: { router }

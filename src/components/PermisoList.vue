@@ -33,8 +33,8 @@
     </div>
 </template>
 <script>
-import axios from 'axios';
 import constants from '../constants';
+import { getPermisos, deletePermisoById } from '../services/apiService';
 export default {
     name: 'permiso-list',
     data() {
@@ -48,20 +48,7 @@ export default {
     },
     methods: {
         initialise() {
-            axios.get('Permiso').then(response => {
 
-                this.permisos = response.data.map(x => {
-                    return {
-                        ...x,
-                        formattedFechaPermiso: new Date(x.fechaPermiso).toLocaleDateString()
-                    }
-                });
-            })
-            .catch(error => {
-
-                this.genericError(error.response)
-
-            });
             this.toast = this.$swal.mixin({
                 ...constants.toastConfig,
                 didOpen: (toast) => {
@@ -70,16 +57,39 @@ export default {
                 }
             });
 
-        },
-        genericError(error) {
-
             this.$swal.fire({
-                title: 'Ha ocurrido un error inesperado',
-                text: 'Contacte a su administrador!',
-                icon: 'error'
+                title: 'Cargando ...',
+                onBeforeOpen() {
+                    Swal.showLoading()
+                },
+                onAfterClose() {
+                    Swal.hideLoading()
+                },
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
             });
 
-            console.error(error);
+            getPermisos().then(permisos => {
+
+                this.permisos = permisos;
+
+            }).catch(errorMessage => {
+
+                this.showWarningToast(errorMessage);
+
+            }).finally(() => {
+                this.$swal.close();
+            })
+
+        },
+        showWarningToast(message) {
+
+            this.$swal.fire({
+                title: message,
+                icon: 'warning'
+            });
 
         },
         deletePermiso(id) {
@@ -93,36 +103,47 @@ export default {
                 confirmButtonText: "Eliminar",
                 cancelButtonText: "Cancelar"
             })
-            .then((result) => {
+                .then((result) => {
 
-                if (result.isConfirmed) {
-                    axios.delete(`Permiso/${id}`)
-                        .then(response => {
+                    if (result.isConfirmed) {
 
-                            this.toast.fire({
-                                icon: 'success',
-                                title: 'Permiso eliminado'
-                            });
-                            this.initialise();
-                            
-                        }).catch(error => {
-
-                            if (error.response.status === 404) {
-
-                                this.$swal.fire({
-                                    title: 'No se encontro el permiso a eliminar',
-                                    icon: 'warning'
-                                });
-
-                            } else {
-
-                                this.genericError(error.response);
-
-                            }
+                        this.$swal.fire({
+                            title: 'Cargando ...',
+                            onBeforeOpen() {
+                                Swal.showLoading()
+                            },
+                            onAfterClose() {
+                                Swal.hideLoading()
+                            },
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            allowEnterKey: false,
+                            showConfirmButton: false,
                         });
-                }
 
-            });
+                        deletePermisoById(id)
+                            .then(() => {
+
+                                this.toast.fire({
+                                    icon: 'success',
+                                    title: 'Permiso eliminado'
+                                });
+                                this.initialise();
+
+                            })
+                            .catch(errorMessage => {
+
+                                this.showWarningToast(errorMessage);
+
+                            })
+                            .finally(() => {
+
+                                this.$swal.close();
+
+                            })
+                    }
+
+                });
         }
     }
 }
